@@ -1,0 +1,660 @@
+= Calculator REST API
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 3
+:sectlinks:
+
+[[specs]]
+== Requirements
+
+1. REST API for calculator operations: ADDITION, SUBTRACTION, MULTIPLICATION, DIVISION, SQUARE ROOT, RANDOM STRINGS
+2. REST API for report operation records: PAGING, SORTING, SEARCHING
+
+[[obs]]
+== Observations
+
+1. RANDOM STRINGS fetches only numeric 8 digit random numbers
+
+[[verbs]]
+== HTTP verbs
+
+HTTP verbs that correspond operation on the API.
+
+[cols="1,1"]
+|===
+| Verb
+| Use
+
+| `GET`
+| (READ) Used to fetch operation records
+
+| `POST`
+| (CREATE) Used to execute an operation
+
+| `PUT`
+| (UPDATE) Used to (logically exclude a record)
+
+|===
+
+[[resources]]
+== Resources
+
+=== Login
+
+URL: `/login-form`
+
+http verb: `POST` for doing login
+
+request body `application/json` sample
+
+include::{snippets}/00-Get authorization/request-body.adoc[]
+
+Request Examples
+
+include::{snippets}/00-Get authorization/curl-request.adoc[]
+
+include::{snippets}/00-Get authorization/httpie-request.adoc[]
+
+Request
+
+include::{snippets}/00-Get authorization/http-request.adoc[]
+
+Response
+
+include::{snippets}/00-Get authorization/http-response.adoc[]
+
+Response Body absent. However, the important part is the token in the authorization header
+
+include::{snippets}/00-Get authorization/response-body.adoc[]
+
+=== Report
+
+All requests should include the authorization token obtained after login
+
+---
+
+URL: `/api/v1/report`
+
+http verb: `GET` for obtaining log records
+
+query parameters: `page`, `pageSize`, `softField` (date, operation), `sortOrder` (asc, desc), `filter` (operation_name)
+
+Request Examples
+
+include::{snippets}/01-Get Report/curl-request.adoc[]
+
+include::{snippets}/01-Get Report/httpie-request.adoc[]
+
+Request
+
+include::{snippets}/01-Get Report/http-request.adoc[]
+
+Response
+
+include::{snippets}/01-Get Report/http-response.adoc[]
+
+Response body `application/json`
+
+include::{snippets}/01-Get Report/response-body.adoc[]
+
+---
+
+URL: `/api/v1/report/{username}/last-balance`
+
+http verb: `GET` for obtaining the last balance for a user
+
+Path Param: `username`
+
+include::{snippets}/02-Last Balance/curl-request.adoc[]
+
+include::{snippets}/02-Last Balance/httpie-request.adoc[]
+
+Response
+
+include::{snippets}/02-Last Balance/http-response.adoc[]
+
+Response Body `text/plain`
+
+include::{snippets}/02-Last Balance/response-body.adoc[]
+
+---
+
+URL: `/api/v3/report/{id}/is-excluded`
+
+http verb: `PUT` for (soft) deleting a record
+
+path param: id is the `UUID` that identifies the record
+
+Request body
+
+include::{snippets}/04-(Soft) Delete Record/request-body.adoc[]
+
+Request Samples
+
+include::{snippets}/04-(Soft) Delete Record/curl-request.adoc[]
+
+include::{snippets}/04-(Soft) Delete Record/httpie-request.adoc[]
+
+Response
+
+include::{snippets}/04-(Soft) Delete Record/http-response.adoc[]
+
+Response body is empty
+
+include::{snippets}/04-(Soft) Delete Record/response-body.adoc[]
+
+=== Operation
+
+base url: `/api/v1/operation`
+
+http verb: `POST`
+
+Request body `application/json`
+
+include::{snippets}/03-Addition/request-body.adoc[]
+
+Request (Addition)
+
+include::{snippets}/03-Addition/curl-request.adoc[]
+
+include::{snippets}/03-Addition/httpie-request.adoc[]
+
+Response
+
+include::{snippets}/03-Addition/http-response.adoc[]
+
+Response body `application/json`
+
+include::{snippets}/03-Addition/response-body.adoc[]
+
+[[OpenAPI]]
+=== OpenAPI v3 spec in JSON
+
+base URL: `/api-docs`
+
+http verb: `GET`
+
+Response
+
+[source]
+----
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Calculator API",
+    "description": "Operations for a Calculator",
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Actuator",
+      "description": "Monitor and interact",
+      "externalDocs": {
+        "description": "Spring Boot Actuator Web API Documentation",
+        "url": "https://docs.spring.io/spring-boot/docs/current/actuator-api/html/"
+      }
+    }
+  ],
+  "paths": {
+    "/api/v1/report/{id}/is-excluded": {
+      "put": {
+        "tags": [
+          "report-controller"
+        ],
+        "operationId": "status",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "boolean"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/login-form": {
+      "post": {
+        "tags": [
+          "auth-controller"
+        ],
+        "operationId": "formLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calculator": {
+      "post": {
+        "tags": [
+          "operation-controller"
+        ],
+        "operationId": "calculate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalculatorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculatorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/report": {
+      "get": {
+        "tags": [
+          "report-controller"
+        ],
+        "operationId": "report",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1000
+            }
+          },
+          {
+            "name": "sortField",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "date"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "desc"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedModelOperationRecordProjection"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/report/{user}/last-balance": {
+      "get": {
+        "tags": [
+          "report-controller"
+        ],
+        "operationId": "lastBalance",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actuator": {
+      "get": {
+        "tags": [
+          "Actuator"
+        ],
+        "summary": "Actuator root web endpoint",
+        "operationId": "links",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/vnd.spring-boot.actuator.v3+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/Link"
+                    }
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/Link"
+                    }
+                  }
+                }
+              },
+              "application/vnd.spring-boot.actuator.v2+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/Link"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actuator/health": {
+      "get": {
+        "tags": [
+          "Actuator"
+        ],
+        "summary": "Actuator web endpoint 'health'",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/vnd.spring-boot.actuator.v3+json": {
+                "schema": {
+                  "type": "object"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              },
+              "application/vnd.spring-boot.actuator.v2+json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actuator/health/**": {
+      "get": {
+        "tags": [
+          "Actuator"
+        ],
+        "summary": "Actuator web endpoint 'health-path'",
+        "operationId": "health-path",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/vnd.spring-boot.actuator.v3+json": {
+                "schema": {
+                  "type": "object"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              },
+              "application/vnd.spring-boot.actuator.v2+json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuthRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "CalculatorRequest": {
+        "required": [
+          "operation"
+        ],
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "ADDITION",
+              "SUBTRACTION",
+              "MULTIPLICATION",
+              "DIVISION",
+              "SQUARE_ROOT",
+              "RANDOM_STRING"
+            ]
+          }
+        }
+      },
+      "CalculatorResponse": {
+        "type": "object",
+        "properties": {
+          "balance": {
+            "type": "number"
+          },
+          "operationResponse": {
+            "type": "string"
+          }
+        }
+      },
+      "OperationRecordProjection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "operationResponse": {
+            "type": "string"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/OperationSummary"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "userBalance": {
+            "type": "number"
+          }
+        }
+      },
+      "OperationSummary": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "ADDITION",
+              "SUBTRACTION",
+              "MULTIPLICATION",
+              "DIVISION",
+              "SQUARE_ROOT",
+              "RANDOM_STRING"
+            ]
+          }
+        }
+      },
+      "PageMetadata": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PagedModelOperationRecordProjection": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OperationRecordProjection"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
+          }
+        }
+      },
+      "Link": {
+        "type": "object",
+        "properties": {
+          "href": {
+            "type": "string"
+          },
+          "templated": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}
+----
+
+
+
+
+
+
+
+
+
+
+
+
+
+

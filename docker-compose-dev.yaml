@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # Spring Boot Calculator Backend
+  app:
+    image: calc-dev
+    container_name: spring_app
+    depends_on:
+      fe:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 384M
+        reservations:
+          memory: 384M
+    ports:
+      - "8080:8080"                      
+    environment:
+      DB_HOST: db:3306
+      DB_USERNAME: root
+      DB_PASSWORD: admin
+      ORIGIN1: http://localhost:3000
+      ORIGIN2: http://localhost:8080
+    networks:
+      - app-network
+
+  # React Calculator Frontend
+  fe:
+    image: calcfe                      
+    container_name: react_app
+    depends_on:
+      mysql-db:
+        condition: service_healthy   
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 128M
+        reservations:
+          memory: 384M
+    ports:
+      - "3000:3000"         
+    networks:
+      - app-network
+
+volumes:
+  db_data:
+
+networks:
+  app-network:
+    driver: bridge
+
